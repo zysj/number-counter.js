@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Demo of number-counter.js</title>
+        <meta charset="utf-8"/>
+        <link rel="stylesheet" href="number-counter.css"/>
+    </head>
+    <body>
+        <div id="number-counter" class="number-counter">
+            <div class="number-counter-wrap">
+                <div class="number-count-piece">
+                    <i class="animate-piece">0</i>
+                    <i class="animate-piece">0</i>
+                    <i class="normal-piece">0</i>
+                </div>
+                <div class="number-count-piece">
+                        <i class="animate-piece">0</i>
+                        <i class="animate-piece">0</i>
+                        <i class="normal-piece">0</i>
+                </div>
+                <div class="number-count-piece">
+                        <i class="animate-piece">0</i>
+                        <i class="animate-piece">0</i>
+                        <i class="normal-piece">0</i>
+                </div>
+            </div>
+        </div>
+        <br/>
+        <div id="number-counter1" class="number-counter">
+            <div class="number-counter-wrap">
+                <div class="number-count-piece">
+                    <i class="animate-piece">0</i>
+                    <i class="animate-piece">0</i>
+                    <i class="normal-piece">0</i>
+                </div>
+                <div class="number-count-piece">
+                        <i class="animate-piece">0</i>
+                        <i class="animate-piece">0</i>
+                        <i class="normal-piece">0</i>
+                </div>
+                <div class="number-count-piece">
+                        <i class="animate-piece">0</i>
+                        <i class="animate-piece">0</i>
+                        <i class="normal-piece">0</i>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script type="text/javascript" src="number-counter.js">
+    </script>
+    <script type="text/javascript">
+        var numc = numberCounter({
+            number:1993.25,
+            directForStop:'normal',
+            directDiff:2,
+            interval:600,
+            showAnimate:true,
+            isRandom:true
+            //autoRun:false
+        });
+        var numc1 = numberCounter({
+            id:'number-counter1',
+            number:2014.15,
+            directForStop:'normal',
+            directDiff:2,
+            interval:500,
+            showAnimate:true,
+            autoRun:true,
+            isRandom:false
+        });
+        //  setTimeout(function(){
+        //      //numc.stop(1);
+        //  },2000);
+          //numc.stop(5);
+        //   numc1.run();
+        //  setTimeout(function(){
+        //      numc1.run();
+        //  },4000);
+
+    </script>
+</html>

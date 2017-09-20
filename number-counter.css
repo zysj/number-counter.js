@@ -1,0 +1,52 @@
+.number-counter .number-count-piece{
+    float: left;
+    margin:0px 1px;
+}
+
+.number-counter .number-counter-wrap{
+}
+
+.number-counter .number-counter-wrap>.number-count-piece{
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+}
+
+.number-counter .number-counter-wrap>.number-count-piece>i{
+    transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition:all .2s linear;
+    font-style: normal;
+    display: block;
+    position: relative;
+}
+
+.number-counter .number-counter-wrap>.number-count-piece>i.before-piece{
+    position: absolute;
+    /* top:-100%; */
+    transform: rotateX(180deg);
+    opacity: 0;
+}
+
+.number-counter .number-counter-wrap>.number-count-piece>i.bottom-piece{
+    position: absolute;
+    top:100%;
+    opacity: 0;
+}
+
+.number-counter .number-counter-wrap>.number-count-piece>i.hide-piece{
+    /* top: 0%; */
+    transform: rotateX(0deg);
+    opacity: 0;
+}
+.number-counter .number-counter-wrap>.number-count-piece>i.show-piece{
+    /* top: 0%; */
+    transform: rotateX(0deg);
+    opacity: 1;
+}
+
+.number-counter .number-counter-wrap>.number-count-piece>i.normal-piece{
+    position: relative;
+    top: 0%;
+}
