@@ -51,7 +51,7 @@
     <script type="text/javascript">
         var numc = numberCounter({
             number:1993.25,
-            directForStop:'normal',
+            directForStop:'right',
             directDiff:2,
             interval:600,
             showAnimate:true,
@@ -61,12 +61,13 @@
         var numc1 = numberCounter({
             id:'number-counter1',
             number:2014.15,
-            directForStop:'normal',
+            directForStop:'left',
             directDiff:2,
-            interval:500,
-            showAnimate:true,
+            interval:100,
+            showAnimate:false,
             autoRun:true,
-            isRandom:false
+            isRandom:false,
+            isIncrease:false
         });
         //  setTimeout(function(){
         //      //numc.stop(1);

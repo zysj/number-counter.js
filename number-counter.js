@@ -98,7 +98,8 @@
         directDiff:1,            //数字间固定时间的差额
         showAnimate:false,           //以动画的方式呈现数字
         autoRun:true,                //是否自动执行动画
-        isRandom:true            
+        isRandom:true,              //所有字符是否都进行随机数字显示
+        isIncrease:true             //在isRandom为false的情况下数字是否递增显示
     }
 
     numberCounter.prototype.init = function(){
@@ -132,36 +133,39 @@
     numberCounter.prototype.runCount = function(){
         var numStr = this.numberStr;
         var counters = this.counters;
-        var directForStop = this.option.directForStop;
-        var directDiff = toNumber(this.option.directDiff) || 1;
+        var option = this.option;
+        var directForStop = option.directForStop;
+        var directDiff = toNumber(option.directDiff) || 1;
         var len = this.hasCount = numStr.length;
-        var times = toNumber(this.option.countTimes);
+        var times = toNumber(option.countTimes);
         var start = directForStop === LEFT ? 0 : len-1;
-        var isRandom = this.option.isRandom;
+        var isRandom = option.isRandom;
+        var isIncrease = option.isIncrease;
         countNumber = countNumber.bind(this);
         while(start>-1){
             if(directForStop === LEFT ? start>len-1 : start<0)break;
             var counter = counters[start];
-            counter.nb = {};
-            counter.nb.nbtimer = null;
-            counter.nb.nbInterval = toNumber(this.option.interval);
-            counter.nb.isRandom = this.option.isRandom;
-            if(this.option.showAnimate){
-                counter.nb.animateFn = upDownCallBack || false;
-                counter.nb.showAnimate = this.option.showAnimate;
+            var nb = counter.nb = {};
+            nb.nbtimer = null;
+            nb.nbInterval = toNumber(option.interval);
+            nb.isRandom = option.isRandom;
+            nb.isIncrease = option.isIncrease;
+            if(option.showAnimate){
+                nb.animateFn = upDownCallBack || false;
+                nb.showAnimate = option.showAnimate;
                 initPieceCallback(counter);
             }else{
                 commonCallBack(counter,0);
-                counter.nb.animateFn = commonCallBack;
+                nb.animateFn = commonCallBack;
             }
             var showNumber = numStr[start];
             if(isRandom || !isNaN(showNumber)){
-                counter.nb.isFirst = true;
-                counter.nb.times = isRandom ? getcountTimes(counters,start,times,directForStop,directDiff) : +showNumber-1;
-                counter.nb.runIterator = runIterator({initfn:countNumber(counter,showNumber),initTimes:counter.nb.times});
-                this.option.autoRun && counter.nb.runIterator && counter.nb.runIterator.run();
+                nb.isFirst = true;
+                nb.times = isRandom ? getcountTimes(counters,start,times,directForStop,directDiff) : isIncrease ? +showNumber-1 : (10-showNumber-1);
+                nb.runIterator = runIterator({initfn:countNumber(counter,showNumber),initTimes:nb.times});
+                option.autoRun && counter.nb.runIterator && nb.runIterator.run();
             }else{
-                counter.nb.times = 0;
+                nb.times = 0;
                 countNumber(counter,showNumber)();
             }
             if(directForStop === LEFT){
@@ -293,18 +297,24 @@
      * @param showNum {Integer}
      */
     function randomNumCallBack(counter,showNum,next){
-        var random = counter.nb.isRandom ? -1 : 0;
+        var nb = counter.nb;
+        var random = nb.isRandom ? -1 : nb.isIncrease ? 0 :10;
         return function(next){
+
             return function(){
-                var animateFn = counter.nb.animateFn;
-                if(counter.nb.times && (random - counter.nb.times) != showNum){
-                    if(counter.nb.isRandom){
+                var animateFn = nb.animateFn;
+                if(nb.times && (random - nb.times) != showNum){
+                    if(nb.isRandom){
                         random = Math.floor(Math.random()*10);
                     }else{
-                        random++;
+                        if(nb.isIncrease){
+                            random++;
+                        }else{
+                            random--;
+                        }
                     }
                     animateFn && animateFn(counter,random);
-                    counter.nb.times--;
+                    nb.times--;
                 }else{
                     animateFn && animateFn(counter,showNum);
                 }
