@@ -99,7 +99,8 @@
         showAnimate:false,           //以动画的方式呈现数字
         autoRun:true,                //是否自动执行动画
         isRandom:true,              //所有字符是否都进行随机数字显示
-        isIncrease:true             //在isRandom为false的情况下数字是否递增显示
+        isIncrease:true,             //在isRandom为false的情况下数字是否递增显示
+        isRunSameTime:false          //是否每一次变化都要等同一阶段的所有数字都变化完在执行下一阶段
     }
 
     numberCounter.prototype.init = function(){
@@ -141,7 +142,7 @@
         var start = directForStop === LEFT ? 0 : len-1;
         var isRandom = option.isRandom;
         var isIncrease = option.isIncrease;
-        countNumber = countNumber.bind(this);
+        this.countNumber = countNumber.bind(this);      //给每个numberCounter一个专属的countNumber函数属性，用于后面的wrapNext函数不会因为countNumber的that问题而产生事件交叉
         while(start>-1){
             if(directForStop === LEFT ? start>len-1 : start<0)break;
             var counter = counters[start];
@@ -162,17 +163,34 @@
             if(isRandom || !isNaN(showNumber)){
                 nb.isFirst = true;
                 nb.times = isRandom ? getcountTimes(counters,start,times,directForStop,directDiff) : isIncrease ? +showNumber-1 : (10-showNumber-1);
-                nb.runIterator = runIterator({initfn:countNumber(counter,showNumber),initTimes:nb.times});
-                option.autoRun && counter.nb.runIterator && nb.runIterator.run();
+                nb.runIterator = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
+                option.autoRun && nb.runIterator && nb.runIterator.run();
             }else{
                 nb.times = 0;
-                countNumber(counter,showNumber)();
+                this.countNumber(counter,showNumber)();
             }
             if(directForStop === LEFT){
                 start++;
             }else{
                 start--;
             }
+        }
+    }
+
+    /**
+     * 包装runInterator赋予的next函数，实现动画同一阶段都执行才进行下一阶段
+     * @param {Function} next
+     */
+    numberCounter.prototype.wrapNext = function(next){
+        if(this.option.isRunSameTime){
+            this.hasCount--;
+            if(!this.hasCount){
+                this.hasCount = this.numberStr.length;
+                this.run();
+                return;
+            }
+        }else{
+            next && next();
         }
     }
 
@@ -259,29 +277,13 @@
         return start;
     }
 
-
     //常规动画：使用requestAnimationFrame动画函数
     function countNumber(counter,showNum){
         var that = this;
         var animation = randomNumCallBack(counter,showNum);
+        
         function runAnimate(next){
-            requestAnimationFrame(animation(next));
-            /**
-             * 功能描述：等待所有数字变化后才执行下一步
-             * 1、只有当在同一个页面初始化一个numberCounter使用
-             * 2、该功能目前不是特别有用，在普通运行情况下也有差不多的效果
-             * 3、该功能可用可不用。
-             */
-            // if(initNumber<2){
-            //     that.hasCount--;
-            //     if(!that.hasCount){
-            //         that.hasCount = that.numberStr.length;
-            //         that.run();
-            //         return;
-            //     }
-            // }else{
-            //     next && next(counter,showNum);
-            // }
+            requestAnimationFrame(animation(that.wrapNext.bind(that,next)));
         }
         return function(next){
             if(counter.nb.nbtimer){
@@ -318,7 +320,7 @@
                 }else{
                     animateFn && animateFn(counter,showNum);
                 }
-                next && next(counter,showNum);
+                next && next();
             }
         }
     }
@@ -511,7 +513,8 @@
      */
     runIterator.prototype.push = function(fn){
         var args = slice(arguments,1);
-        this.splice(wrapFn(fn,args,this.next),this.interator.length,0);
+        var wfn = wrapFn(fn,args,this.next);
+        this.splice(wfn,this.interator.length,0);
     }
 
     /**
@@ -523,7 +526,7 @@
     runIterator.prototype.splice = function(fn,index,i){
         var args = slice(arguments,3);
         var spliceArgs = slice(arguments,1,3);
-        spliceArgs.push(wrapFn(fn,args,this.next));
+        spliceArgs.push(fn);
         Array.prototype.splice.apply(this.interator,spliceArgs);
     }
 
@@ -542,7 +545,8 @@
     runIterator.prototype.run = function(){
         if(this.interator.length){
             if(this.isStop || this.stopIndex == this.interator.length)return;
-            return this.interator.shift().apply(null,arguments);
+            var rfn = this.interator.shift();
+            return rfn();
         }
     }
 
@@ -602,4 +606,5 @@
     }
 
     window.numberCounter = numberCounter;
+
 },window);
