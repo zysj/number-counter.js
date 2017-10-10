@@ -1,5 +1,3 @@
-
-
 (function(factory,window){
 
     var w = window;
@@ -53,7 +51,7 @@
             for(i = 0,len=sources.length;i<len;i++){
                 extend(target,sources[i]);
             }
-           return target;
+            return target;
         }
         return target;
     }
@@ -152,7 +150,7 @@
             nb.isRandom = option.isRandom;
             nb.isIncrease = option.isIncrease;
             if(option.showAnimate){
-                nb.animateFn = upDownCallBack || false;
+                nb.animateFn = transitionCallBack || false;
                 nb.showAnimate = option.showAnimate;
                 initPieceCallback(counter);
             }else{
@@ -235,6 +233,24 @@
             counter.nb.runIterator && counter.nb.runIterator.addTimes(num);
         });
     }
+
+    numberCounter.prototype.addIterator = function(index,num,times,fn){
+        if(!toNumber(num))return;
+        index = toNumber(index);
+        var counter = this.counters[index];
+        if(!toNumber(times))times = 1;
+        if(typeof fn !== 'function'){
+            fn = this.countNumber(counter,num);
+        }else{
+            fn = fn.bind(this,counter,num);
+        }
+        while(times>0){
+            counter.nb.runIterator.push(fn);
+            times--;
+        }
+        initNormalNode(counter);
+        counter.nb.runIterator.run();
+    }
     
 
     /**
@@ -300,7 +316,7 @@
      */
     function randomNumCallBack(counter,showNum,next){
         var nb = counter.nb;
-        var random = nb.isRandom ? -1 : nb.isIncrease ? 0 :10;
+        var random = nb.isRandom ? -2 : nb.isIncrease ? 0 :10;
         return function(next){
 
             return function(){
@@ -353,9 +369,23 @@
      * @param {Node} counter
      * @param {Integer} showNum
      */
-    function upDownCallBack(counter,showNum){
+    function transitionCallBack(counter,showNum){
         var curChild,lastChild;
-        var animatePies = counter.getElementsByClassName(classArr[ANIMATE])
+        var animatePies = counter.getElementsByClassName(classArr[ANIMATE]);
+        //第一次动画时初始化normal节点
+        if(counter.nb.isFirst){
+            initNormalNode(counter);
+            if(!counter.childIndex){
+                curChild = animatePies[0];
+                lastChild = animatePies[1];
+                counter.childIndex = 1;
+                curChild.textContent = showNum;
+                toggleClass(curChild,classArr[SHOW],true);
+                toggleClass(lastChild,classArr[HIDE],true);
+                toggleClass(lastChild,classArr[SHOW],false);
+            }
+            counter.nb.isFirst = false;
+        }
         if(!counter.childIndex){
             curChild = animatePies[0];
             lastChild = animatePies[1]
@@ -365,15 +395,11 @@
             lastChild = animatePies[0]
             counter.childIndex = 0;
         }
-        //第一次动画时初始化normal节点
-        if(counter.nb.isFirst){
-            initNormalNode(counter);
-            counter.nb.isFirst = false;
-        }
-        if(counter.nb.times==0){
-            curChild = counter.getElementsByClassName(classArr[NORMAL])[0];
-            curChild.style['opacity'] = 1;
-        }
+        //旧方式
+        // if(counter.nb.times==0){
+        //     curChild = counter.getElementsByClassName(classArr[NORMAL])[0];
+        //     curChild.style['opacity'] = 1;
+        // }
         curChild.textContent = showNum;
         toggleClass(curChild,classArr[SHOW],true);
         toggleClass(lastChild,classArr[HIDE],true);
