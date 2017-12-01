@@ -585,23 +585,14 @@
      * @param {Function or Array<Function>} otherFn 
      */
     function wrapFn(fn,args,otherFn){
-        var allArgs = [fn];
-        if(args instanceof Array !== true ){
-            args = [].concat(args);
+        var allArgs = [];
+        if(args instanceof Array === true){
+            allArgs = allArgs.concat(args);
         }
-        if(otherFn)args = args.concat(otherFn);
-        allArgs = allArgs.concat(args);
-        var tmp = ['fn'];
-        var fnStr = 'return fn.bind(null';
-        for(var i = 0,len=args.length;i<len;i++){
-            tmpArg = 'arg' + i;
-            tmp.push(tmpArg);
-                fnStr += ','+tmpArg;
+        if(otherFn)allArgs.push(otherFn);
+        return function(){
+            return fn.apply(null,allArgs);
         }
-        fnStr += ')';
-        tmp.push(fnStr);
-        var tmpFn = Function.apply(null,tmp);
-        return tmpFn.apply(null,allArgs);
     }
 
     window.numberCounter = numberCounter;
