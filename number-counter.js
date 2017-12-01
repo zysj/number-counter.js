@@ -172,11 +172,13 @@
             }else{
                 start--;
             }
+            //执行第一次初始化
+            nb.animateFn(counter,0);
         }
     }
 
     /**
-     * 包装runInterator赋予的next函数，实现动画同一阶段都执行才进行下一阶段
+     * 包装runIterator赋予的next函数，实现动画同一阶段都执行才进行下一阶段
      * @param {Function} next
      */
     numberCounter.prototype.wrapNext = function(next){
@@ -248,7 +250,6 @@
             counter.nb.runIterator.push(fn);
             times--;
         }
-        initNormalNode(counter);
         counter.nb.runIterator.run();
     }
     
@@ -350,42 +351,15 @@
         counter.textContent = showNum;
     }
 
-    /**
-     * 初始化normal节点
-     * @param {Node} counter 
-     */
-    function initNormalNode(counter){
-        if(!counter)return;
-        var normal = counter.getElementsByClassName(classArr[NORMAL])[0];
-        if(!normal)return;
-        normal.style['opacity'] = 0;
-        if(counter.nb.showAnimate){
-            toggleClass(normal,classArr[BEFORE],true);
-        }
-    }
 
     /**
-     * 随机数字从上或下面出现
+     * 随机数字根据class效果出现
      * @param {Node} counter
      * @param {Integer} showNum
      */
     function transitionCallBack(counter,showNum){
         var curChild,lastChild;
         var animatePies = counter.getElementsByClassName(classArr[ANIMATE]);
-        //第一次动画时初始化normal节点
-        if(counter.nb.isFirst){
-            initNormalNode(counter);
-            if(!counter.childIndex){
-                curChild = animatePies[0];
-                lastChild = animatePies[1];
-                counter.childIndex = 1;
-                curChild.textContent = showNum;
-                toggleClass(curChild,classArr[SHOW],true);
-                toggleClass(lastChild,classArr[HIDE],true);
-                toggleClass(lastChild,classArr[SHOW],false);
-            }
-            counter.nb.isFirst = false;
-        }
         if(!counter.childIndex){
             curChild = animatePies[0];
             lastChild = animatePies[1]
@@ -395,15 +369,14 @@
             lastChild = animatePies[0]
             counter.childIndex = 0;
         }
-        //旧方式
-        // if(counter.nb.times==0){
-        //     curChild = counter.getElementsByClassName(classArr[NORMAL])[0];
-        //     curChild.style['opacity'] = 1;
-        // }
         curChild.textContent = showNum;
         toggleClass(curChild,classArr[SHOW],true);
-        toggleClass(lastChild,classArr[HIDE],true);
-        toggleClass(lastChild,classArr[SHOW],false);
+        if(!counter.nb.isFirst){
+            toggleClass(lastChild,classArr[HIDE],true);
+            toggleClass(lastChild,classArr[SHOW],false);
+        }else{
+            counter.nb.isFirst = false;
+        }
     }
 
     /**
@@ -498,11 +471,11 @@
             return new runIterator(option);
         }
         this.option = extend({},this.defaults,option);
-        this.interator = [];
+        this.iterator = [];
         this.isStop = false;
         this.next = this.next.bind(this);
         this.stopIndex = -1;
-        this.initInterator();
+        this.initIterator();
     }
 
     runIterator.prototype.defaults = {
@@ -513,7 +486,7 @@
     /**
      * 初始化迭代器
      */
-    runIterator.prototype.initInterator = function(){
+    runIterator.prototype.initIterator = function(){
         var initTimes = this.option.initTimes;
         var initfn = this.option.initfn;
         if(initTimes<0 || !initfn)return;
@@ -540,7 +513,7 @@
     runIterator.prototype.push = function(fn){
         var args = slice(arguments,1);
         var wfn = wrapFn(fn,args,this.next);
-        this.splice(wfn,this.interator.length,0);
+        this.splice(wfn,this.iterator.length,0);
     }
 
     /**
@@ -553,7 +526,7 @@
         var args = slice(arguments,3);
         var spliceArgs = slice(arguments,1,3);
         spliceArgs.push(fn);
-        Array.prototype.splice.apply(this.interator,spliceArgs);
+        Array.prototype.splice.apply(this.iterator,spliceArgs);
     }
 
     /**
@@ -569,9 +542,9 @@
      * 运行队列第一个函数
      */
     runIterator.prototype.run = function(){
-        if(this.interator.length){
-            if(this.isStop || this.stopIndex == this.interator.length)return;
-            var rfn = this.interator.shift();
+        if(this.iterator.length){
+            if(this.isStop || this.stopIndex == this.iterator.length)return;
+            var rfn = this.iterator.shift();
             return rfn();
         }
     }
@@ -580,7 +553,7 @@
      * 清除队列，结束执行
      */
     runIterator.prototype.end = function(){
-        this.interator.length = 0;
+        this.iterator.length = 0;
     }
 
     /**
@@ -589,7 +562,7 @@
      */
     runIterator.prototype.stop = function(index){
         if(index = toNumber(index)){
-            this.stopIndex = this.interator.length-index;
+            this.stopIndex = this.iterator.length-index;
         }else{
             this.isStop = true;
         }

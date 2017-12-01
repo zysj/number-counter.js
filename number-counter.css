@@ -48,5 +48,5 @@
 
 .number-counter .number-counter-wrap>.number-count-piece>i.normal-piece{
     position: relative;
-    top: 0%;
+    opacity: 0;
 }
