@@ -50,33 +50,44 @@
     </script>
     <script type="text/javascript">
         var numc = numberCounter({
-            number:1993.25,
-            directForStop:'right',
-            directDiff:2,
-            interval:600,
+            number:7993.25,
+            directForStop:'normal',
+            directDiff:1,
+            interval:350,
             showAnimate:true,
-            isRandom:true
-            //autoRun:false
+            isRandom:false,
+            // countTimes:3,
+            isRunSameTime:true,
+            specialNums:[{
+                index:0,
+                interval:400,
+                descSpeed:100,
+                descStart:3
+            }]
+            // autoRun:false
         });
         var numc1 = numberCounter({
             id:'number-counter1',
             number:2014.15,
-            directForStop:'left',
+            directForStop:'normal',
             directDiff:2,
-            interval:100,
-            showAnimate:false,
+            interval:400,
+            showAnimate:true,
             autoRun:true,
-            isRandom:false,
-            isIncrease:false
+            isRandom:true,
+            isIncrease:true,
+            countTimes:3
         });
         //  setTimeout(function(){
         //      //numc.stop(1);
         //  },2000);
           //numc.stop(5);
         //   numc1.run();
+        
         //  setTimeout(function(){
-        //      numc1.run();
-        //  },4000);
+        //      numc.addIterator(0,5,1);
+        //      console.log(numc1);
+        //  },3500);
 
     </script>
 </html>

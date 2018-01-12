@@ -90,15 +90,16 @@
         el:null,
         id:'number-counter',
         number:1000,            //最终显示的数字
-        interval:50,            //更改数字的频率
+        interval:30,            //更改数字的频率
         countTimes:10,          //更改数字的次数
         directForStop:'normal', //数字逐渐固定的方向。'lett'--从左向右固定;'right'--从右向左固定
         directDiff:1,            //数字间固定时间的差额
         showAnimate:false,           //以动画的方式呈现数字
         autoRun:true,                //是否自动执行动画
-        isRandom:true,              //所有字符是否都进行随机数字显示
+        isRandom:false,              //所有字符是否都进行随机数字显示
         isIncrease:true,             //在isRandom为false的情况下数字是否递增显示
-        isRunSameTime:false          //是否每一次变化都要等同一阶段的所有数字都变化完在执行下一阶段
+        isRunSameTime:false,          //是否每一次变化都要等同一阶段的所有数字都变化完在执行下一阶段
+        specialNums:[]              //指定某个位置的数字的表现。例[{index:0,interval:400,descSpeed:100,descStart:3}]
     }
 
     numberCounter.prototype.init = function(){
@@ -141,6 +142,10 @@
         var isRandom = option.isRandom;
         var isIncrease = option.isIncrease;
         this.countNumber = countNumber.bind(this);      //给每个numberCounter一个专属的countNumber函数属性，用于后面的wrapNext函数不会因为countNumber的that问题而产生事件交叉
+        var curSpecial;
+        var specialNums = this.option.specialNums;
+        var maxTime = specialNums && specialNums.length && this.maxTime();
+        this.hasCount -= specialNums.length;
         while(start>-1){
             if(directForStop === LEFT ? start>len-1 : start<0)break;
             var counter = counters[start];
@@ -149,6 +154,9 @@
             nb.nbInterval = toNumber(option.interval);
             nb.isRandom = option.isRandom;
             nb.isIncrease = option.isIncrease;
+            specialNums.map(function(item){
+                curSpecial = item.index == start ? item : null;
+            })
             if(option.showAnimate){
                 nb.animateFn = transitionCallBack || false;
                 nb.showAnimate = option.showAnimate;
@@ -158,7 +166,22 @@
                 nb.animateFn = commonCallBack;
             }
             var showNumber = numStr[start];
-            if(isRandom || !isNaN(showNumber)){
+            /**
+             * 选择某一个位置的数字计数时逐渐减缓，其他位置的计数同时从1到9循环计数。
+             */
+            if(specialNums && specialNums.length){
+                nb.isFirst = true;
+                nb.times = curSpecial ? +showNumber-1 : Math.floor(maxTime/option.interval)-1;
+                nb.runIterator = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
+                nb.specialNum = curSpecial;
+                option.autoRun && nb.runIterator && nb.runIterator.run();
+            /**
+             * 随机计数
+             * 1、同时计数，同时结束，随机计数
+             * 2、从左到右或从右到左随机计数逐渐停止
+             * 3、从0开始计数直到该位置的数字为止而停止，同时开始，不同时结束
+             */
+            }else if(isRandom||!isNaN(showNumber)){
                 nb.isFirst = true;
                 nb.times = isRandom ? getcountTimes(counters,start,times,directForStop,directDiff) : isIncrease ? +showNumber-1 : (10-showNumber-1);
                 nb.runIterator = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
@@ -172,25 +195,39 @@
             }else{
                 start--;
             }
-            //执行第一次初始化
-            nb.animateFn(counter,0);
         }
+    }
+
+    /**
+     * 计算动画所需要的总时间
+     */
+    numberCounter.prototype.maxTime = function(){
+        var specialNums = this.option.specialNums;
+        if(!specialNums || !specialNums.length)return 0;
+        var max = 0,tmpMax,num;
+        for(var i = 0,len = specialNums.length;i<len;i++){
+            num = +this.numberStr[specialNums[i].index];
+            if(isNaN(num))continue;
+            tmpMax = num*specialNums[i].interval+specialNums[i].descStart*(specialNums[i].descStart+1)*0.5*specialNums[i].descSpeed;
+            max = tmpMax > max ? tmpMax : max;
+        }
+        return max;
     }
 
     /**
      * 包装runIterator赋予的next函数，实现动画同一阶段都执行才进行下一阶段
      * @param {Function} next
      */
-    numberCounter.prototype.wrapNext = function(next){
-        if(this.option.isRunSameTime){
+    numberCounter.prototype.wrapNext = function(next,counter){
+        if(this.option.isRunSameTime && counter.nb.specialNum){
+            next && next();
+        }else{
             this.hasCount--;
             if(!this.hasCount){
-                this.hasCount = this.numberStr.length;
+                this.hasCount = this.numberStr.length-this.option.specialNums.length;
                 this.run();
                 return;
             }
-        }else{
-            next && next();
         }
     }
 
@@ -203,6 +240,17 @@
             counter.nb.runIterator && counter.nb.runIterator.end();
         })
     }
+
+    /**
+     * 执行最后一帧动画
+     */
+    numberCounter.prototype.toLast = function(){
+
+        map(this.counters,function(counter){
+            counter.nb.runIterator && counter.nb.runIterator.toLast();
+        })
+    }
+    
     /**
      * 暂停动画
      */
@@ -223,7 +271,9 @@
      * 执行动画
      */
     numberCounter.prototype.run = function(){
+        var that = this;
         map(this.counters,function(counter){
+            if(that.option.isRunSameTime && counter.nb.specialNum)return;
             counter.nb.runIterator && counter.nb.runIterator.run();
         });
     }
@@ -236,6 +286,13 @@
         });
     }
 
+    /**
+     * 增加一次计数动画
+     * @param {Number} index 
+     * @param {Number} num 
+     * @param {Number} times 
+     * @param {Function} fn 
+     */
     numberCounter.prototype.addIterator = function(index,num,times,fn){
         if(!toNumber(num))return;
         index = toNumber(index);
@@ -300,13 +357,22 @@
         var animation = randomNumCallBack(counter,showNum);
         
         function runAnimate(next){
-            requestAnimationFrame(animation(that.wrapNext.bind(that,next)));
+            requestAnimationFrame(animation(that.wrapNext.bind(that,next,counter)));
         }
         return function(next){
             if(counter.nb.nbtimer){
                 clearTimeout(counter.nb.nbtimer);
             }
-            counter.nb.nbtimer = setTimeout(runAnimate.bind(null,next),counter.nb.nbInterval);
+            var interval = counter.nb.nbInterval;
+            var specialNum = counter.nb.specialNum;
+            var curLen = counter.nb.runIterator.iterator && counter.nb.runIterator.iterator.length || Infinity;
+            if(specialNum && curLen<=specialNum.descStart){
+                var curLen = counter.nb.runIterator.iterator.length;
+                if(curLen == 0)that.toLast();
+                interval = specialNum.interval + specialNum.descSpeed*(specialNum.descStart - curLen+1);
+                console.log(interval);
+            }
+            counter.nb.nbtimer = setTimeout(runAnimate.bind(null,next),interval);
         }
     }
 
@@ -328,8 +394,10 @@
                     }else{
                         if(nb.isIncrease){
                             random++;
+                            if(random == 9)random =1;
                         }else{
                             random--;
+                            if(random == 1)random =9;
                         }
                     }
                     animateFn && animateFn(counter,random);
@@ -554,6 +622,15 @@
      */
     runIterator.prototype.end = function(){
         this.iterator.length = 0;
+    }
+
+    /**
+     * 执行最后一个函数
+     */
+    runIterator.prototype.toLast = function(){
+        this.iterator[0] = this.iterator[this.iterator.length-1];
+        this.iterator.length = 1;
+        console.log(this.iterator);
     }
 
     /**
