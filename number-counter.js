@@ -206,7 +206,7 @@
         if(!specialNums || !specialNums.length)return 0;
         var max = 0,tmpMax,num;
         for(var i = 0,len = specialNums.length;i<len;i++){
-            num = +this.numberStr[specialNums[i].index];
+            num = +this.numberStr[specialNums[i].index]+1;
             if(isNaN(num))continue;
             tmpMax = num*specialNums[i].interval+specialNums[i].descStart*(specialNums[i].descStart+1)*0.5*specialNums[i].descSpeed;
             max = tmpMax > max ? tmpMax : max;
@@ -360,17 +360,16 @@
             requestAnimationFrame(animation(that.wrapNext.bind(that,next,counter)));
         }
         return function(next){
-            if(counter.nb.nbtimer){
-                clearTimeout(counter.nb.nbtimer);
+            var nb = counter.nb;
+            if(nb.nbtimer){
+                clearTimeout(nb.nbtimer);
             }
-            var interval = counter.nb.nbInterval;
-            var specialNum = counter.nb.specialNum;
-            var curLen = counter.nb.runIterator.iterator && counter.nb.runIterator.iterator.length || Infinity;
-            if(specialNum && curLen<=specialNum.descStart){
-                var curLen = counter.nb.runIterator.iterator.length;
-                if(curLen == 0)that.toLast();
+            var interval = nb.nbInterval;
+            var specialNum = nb.specialNum;
+            var curLen = nb.runIterator.iterator && nb.runIterator.iterator.length >-1 ?  nb.runIterator.iterator.length : Infinity;
+            if(specialNum && curLen<specialNum.descStart){
+                // if(curLen == 0)that.toLast();
                 interval = specialNum.interval + specialNum.descSpeed*(specialNum.descStart - curLen+1);
-                console.log(interval);
             }
             counter.nb.nbtimer = setTimeout(runAnimate.bind(null,next),interval);
         }
@@ -388,16 +387,16 @@
 
             return function(){
                 var animateFn = nb.animateFn;
-                if(nb.times && (random - nb.times) != showNum){
+                if(nb.times && ((random - nb.times) != showNum || !nb.specialNum)){
                     if(nb.isRandom){
                         random = Math.floor(Math.random()*10);
                     }else{
                         if(nb.isIncrease){
                             random++;
-                            if(random == 9)random =1;
+                            if(random == 10)random =1;
                         }else{
                             random--;
-                            if(random == 1)random =9;
+                            if(random == 1)random =10;
                         }
                     }
                     animateFn && animateFn(counter,random);
