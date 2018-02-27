@@ -50,34 +50,52 @@
     </script>
     <script type="text/javascript">
         var numc = numberCounter({
-            number:7993.25,
-            directForStop:'normal',
+            number:12329,
+            directForStop:'left',
             directDiff:1,
-            interval:350,
-            showAnimate:true,
-            isRandom:false,
-            // countTimes:3,
-            isRunSameTime:true,
-            specialNums:[{
-                index:0,
-                interval:400,
-                descSpeed:100,
-                descStart:3
-            }]
+            interval:300,
+            showAnimate:false,
+            isRandom:true,
+            // autoRun:false,
+            countTimes:4,
+            descSpeed:30,
+            endMillSecond:3000,
+            isRunSameTime:false,
+            // speNumDirect:'right',
+            // specialNums:[{
+            //     cycleTimes:1,
+            //     totalMillSecond:1000,
+            // },{
+            //     cycleTimes:3,
+            //     totalMillSecond:2000
+            // },{
+            //     cycleTimes:5,
+            //     totalMillSecond:2500
+            // },{
+            //     cycleTimes:7,
+            //     totalMillSecond:3000
+            // }]
             // autoRun:false
         });
-        var numc1 = numberCounter({
-            id:'number-counter1',
-            number:2014.15,
-            directForStop:'normal',
-            directDiff:2,
-            interval:400,
-            showAnimate:true,
-            autoRun:true,
-            isRandom:true,
-            isIncrease:true,
-            countTimes:3
-        });
+        console.log(numc);
+        // var numc1 = numberCounter({
+        //     id:'number-counter1',
+        //     number:5014.15,
+        //     directForStop:'normal',
+        //     // directDiff:2,
+        //     interval:400,
+        //     showAnimate:true,
+        //     // autoRun:true,
+        //     isRandom:false,
+        //     isIncrease:true,
+        //     // countTimes:3
+        //     specialNums:[{
+        //         index:0,
+        //         interval:400,
+        //         descSpeed:100,
+        //         descStart:3
+        //     }]
+        // });
         //  setTimeout(function(){
         //      //numc.stop(1);
         //  },2000);

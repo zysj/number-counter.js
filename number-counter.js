@@ -2,12 +2,13 @@
 
     var w = window;
     if(!w || !w.document)return;
-    if(window.documentMode && window.documentMode<10){
-        throw new Error('请使用IE10及以上版本的浏览器');
-    }
+    // if(window.documentMode && window.documentMode<10){
+    //     throw new Error('请使用IE10及以上版本的浏览器');
+    // }
     if(typeof module === 'object' && typeof module.exports === 'object'){
         return (module.exports === factory(w));
     }
+    if(typeof define == 'function' && typeof define.amd == 'object')define(factory);
     return factory(w); 
 
 })(function(window){
@@ -26,7 +27,7 @@
                     isAllSame = false;
                     break;
                 }
-                if(args[i] && args[i+1] &&　(isArray = args[i] instanceof Array) === args[i+1] instanceof Array){
+                if(args[i] && args[i+1] && (isArray = args[i] instanceof Array) === args[i+1] instanceof Array){
                     continue;
                 }
                 isAllSame = true;
@@ -36,7 +37,7 @@
             if(typeof target === undefined || target === null)target = isArray ? [] : {};
             sources = args.slice(1);
         }
-        if((!sources.length &&　source) || sources.length == 1){
+        if((!sources.length && source) || sources.length == 1){
             sources.length && (source = sources[0]);
             if(isArray){
                 for(i = 0,len=source.length;i<len;i++){
@@ -86,6 +87,45 @@
         this.init();
     }
 
+    /**
+     * specialNums的使用方式：
+     * 1、与speNumDirect组合使用。
+     * 根据speNumDirect的方向，按照specialNums数组的元素顺序给每个数字添加效果
+     * cycleTimes: 循环次数
+     * totalMillSecond: 动画总时间
+       
+        speNumDirect:'right',
+        specialNums:[{
+            cycleTimes:1,
+            totalMillSecond:1000,
+        },{
+            cycleTimes:3,
+            totalMillSecond:2000
+        },{
+            cycleTimes:5,
+            totalMillSecond:2500
+        },{
+            cycleTimes:7,
+            totalMillSecond:3000
+        }]
+        
+        2、单独使用
+        指定某个位置的数字
+        index: 指定位置
+        interval: 动画间隔时间,
+        descSpeed: 动画间隔时间增长速度
+        descStart: 从倒数第几次开始递减
+        
+        specialNums:[{
+                index:0,
+                interval:400,
+                descSpeed:100,
+                descStart:3
+        }]
+
+        两种方式中的属性最好不要同时出现
+     */
+
     numberCounter.prototype.defaults = {
         el:null,
         id:'number-counter',
@@ -99,6 +139,9 @@
         isRandom:false,              //所有字符是否都进行随机数字显示
         isIncrease:true,             //在isRandom为false的情况下数字是否递增显示
         isRunSameTime:false,          //是否每一次变化都要等同一阶段的所有数字都变化完在执行下一阶段
+        descSpeed:null,             //动画间隔时间增长速度
+        endMillSecond:null,         //动画总时间
+        speNumDirect:null,          //specialNums匹配方向
         specialNums:[]              //指定某个位置的数字的表现。例[{index:0,interval:400,descSpeed:100,descStart:3}]
     }
 
@@ -144,7 +187,9 @@
         this.countNumber = countNumber.bind(this);      //给每个numberCounter一个专属的countNumber函数属性，用于后面的wrapNext函数不会因为countNumber的that问题而产生事件交叉
         var curSpecial;
         var specialNums = this.option.specialNums;
-        var maxTime = specialNums && specialNums.length && this.maxTime();
+        var speNumDirect = this.option.speNumDirect;
+        var maxTime = !speNumDirect && specialNums && specialNums.length && this.maxTime();
+        var descSpeed = option.endMillSecond ? calcuGradSpeed(times+1,option.interval,directDiff,numStr.length-1,option.endMillSecond) : option.descSpeed; 
         this.hasCount -= specialNums.length;
         while(start>-1){
             if(directForStop === LEFT ? start>len-1 : start<0)break;
@@ -154,8 +199,14 @@
             nb.nbInterval = toNumber(option.interval);
             nb.isRandom = option.isRandom;
             nb.isIncrease = option.isIncrease;
-            specialNums.map(function(item){
-                curSpecial = item.index == start ? item : null;
+            nb.descSpeed = option.descSpeed;
+            curSpecial = null;
+            specialNums.map(function(item,i){
+                var tindex = speNumDirect ?  i : item.index;
+                var diff = specialNums.length - numStr.length;
+                var tmpStart = start + (speNumDirect && speNumDirect != LEFT ? diff : 0);
+                if(curSpecial)return;
+                curSpecial = tindex == tmpStart ? item : null;
             })
             if(option.showAnimate){
                 nb.animateFn = transitionCallBack || false;
@@ -165,15 +216,24 @@
                 commonCallBack(counter,0);
                 nb.animateFn = commonCallBack;
             }
-            var showNumber = numStr[start];
+            var showNumber = +numStr[start];
             /**
-             * 选择某一个位置的数字计数时逐渐减缓，其他位置的计数同时从1到9循环计数。
+             * 1、选择某一个位置的数字计数时逐渐减缓，其他位置的计数同时从1到9循环计数。
+             * 2、根据数组的元素位置给对应位置的数字循环递增或递减0~9，在最后一轮则在递增或递减至该数字
              */
             if(specialNums && specialNums.length){
+                var runInfo = null;
+                if(speNumDirect&&curSpecial){
+                    runInfo = caluSpeNumInfo(curSpecial.cycleTimes,curSpecial.totalMillSecond,showNumber);
+                    curSpecial.interval = runInfo.interval;
+                    curSpecial.times = runInfo.times;
+                }else{
+                    runInfo = {interval:option.interval};
+                }
                 nb.isFirst = true;
-                nb.times = curSpecial ? +showNumber-1 : Math.floor(maxTime/option.interval)-1;
+                nb.times = curSpecial ? (speNumDirect ? curSpecial.times : +showNumber-1 ): (maxTime ? Math.floor(maxTime/option.interval)-1 : showNumber-1);
                 nb.runIterator = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
-                nb.specialNum = curSpecial;
+                nb.specialNum = curSpecial || runInfo;
                 option.autoRun && nb.runIterator && nb.runIterator.run();
             /**
              * 随机计数
@@ -206,7 +266,7 @@
         if(!specialNums || !specialNums.length)return 0;
         var max = 0,tmpMax,num;
         for(var i = 0,len = specialNums.length;i<len;i++){
-            num = +this.numberStr[specialNums[i].index]+1;
+            num = +this.numberStr[specialNums[i].index] + 1;
             if(isNaN(num))continue;
             tmpMax = num*specialNums[i].interval+specialNums[i].descStart*(specialNums[i].descStart+1)*0.5*specialNums[i].descSpeed;
             max = tmpMax > max ? tmpMax : max;
@@ -219,7 +279,7 @@
      * @param {Function} next
      */
     numberCounter.prototype.wrapNext = function(next,counter){
-        if(this.option.isRunSameTime && counter.nb.specialNum){
+        if(!this.option.isRunSameTime){
             next && next();
         }else{
             this.hasCount--;
@@ -355,7 +415,7 @@
     function countNumber(counter,showNum){
         var that = this;
         var animation = randomNumCallBack(counter,showNum);
-        
+        var option = this.option;
         function runAnimate(next){
             requestAnimationFrame(animation(that.wrapNext.bind(that,next,counter)));
         }
@@ -366,12 +426,34 @@
             }
             var interval = nb.nbInterval;
             var specialNum = nb.specialNum;
+            var initTimes = nb.runIterator.option.initTimes;
+            var countTimes = that.option.countTimes;
             var curLen = nb.runIterator.iterator && nb.runIterator.iterator.length >-1 ?  nb.runIterator.iterator.length : Infinity;
-            if(specialNum && curLen<specialNum.descStart){
+            if(specialNum && specialNum.descStart && curLen<specialNum.descStart){
                 // if(curLen == 0)that.toLast();
                 interval = specialNum.interval + specialNum.descSpeed*(specialNum.descStart - curLen+1);
+            }else if(nb.descSpeed && curLen<initTimes-countTimes){
+                interval += nb.descSpeed*(initTimes-countTimes - curLen+1);
+            }else if(option.speNumDirect){
+                interval = specialNum.interval;
             }
             counter.nb.nbtimer = setTimeout(runAnimate.bind(null,next),interval);
+        }
+    }
+
+    //计算递减
+    function calcuGradSpeed(baseTimes,interval,diff,diffLen,endTime){
+        var totalDiff = diffLen*diff;
+        var diffTime = endTime - interval*(baseTimes+totalDiff);
+        var totalLen = (totalDiff+1)*totalDiff/2;
+        return diffTime/totalLen;
+    }
+
+    function caluSpeNumInfo(cycles,totalms,num){
+        var times = (cycles+ (cycles<2 ? 0 : -1))*10+num;
+        return {
+            times:times,
+            interval:totalms/times
         }
     }
 
@@ -380,7 +462,7 @@
      * @param counter {Node}
      * @param showNum {Integer}
      */
-    function randomNumCallBack(counter,showNum,next){
+    function randomNumCallBack(counter,showNum){
         var nb = counter.nb;
         var random = nb.isRandom ? -2 : nb.isIncrease ? 0 :10;
         return function(next){
@@ -393,10 +475,10 @@
                     }else{
                         if(nb.isIncrease){
                             random++;
-                            if(random == 10)random =1;
+                            if(random == 10)random =0;
                         }else{
                             random--;
-                            if(random == 1)random =10;
+                            if(random == -1)random =9;
                         }
                     }
                     animateFn && animateFn(counter,random);
@@ -629,7 +711,6 @@
     runIterator.prototype.toLast = function(){
         this.iterator[0] = this.iterator[this.iterator.length-1];
         this.iterator.length = 1;
-        console.log(this.iterator);
     }
 
     /**
@@ -671,6 +752,6 @@
         }
     }
 
-    window.numberCounter = numberCounter;
+    return window.numberCounter = numberCounter;
 
 },window);
