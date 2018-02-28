@@ -155,18 +155,33 @@
     }
 
     /**
-     * 如果显示的数字的字符串长度大于初始化时的class为number-count-piece的元素的个数，就复制最后一个元素，假如到el中。
+     * 1、如果显示的数字的字符串长度大于初始化时的class为number-count-piece的元素的个数，就复制最后一个元素，假如到el中。
+     * 2、可根据isBefore决定是否从第一位开始增加元素，删除元素只从第一位开始
      */
-    numberCounter.prototype.addRestPiece = function(){
-        var numStr = this.numberStr;
+    numberCounter.prototype.addRestPiece = function(numStr,isBefore){
+        numStr = numStr || this.numberStr;
         var counters = this.counters;
+        isBefore = isBefore || false;
         if((diff = numStr.length - counters.length)>0){
             while(diff){
                 var tmpPie = counters[counters.length-1].cloneNode(true);
-                counters[counters.length-1].parentNode.appendChild(tmpPie);
+                tmpPie.textContent = 0;
+                if(isBefore){
+                    counters[counters.length-1].parentNode.insertBefore(tmpPie,counters[0]);
+                    counters = this.el.getElementsByClassName('number-count-piece');
+                }else{
+                    counters[counters.length-1].parentNode.appendChild(tmpPie);
+                }
                 diff--;
             }
             this.counters = this.el.getElementsByClassName('number-count-piece');
+        }else{
+            var index = 0;
+            while(diff<0){
+                counters[counters.length-1].parentNode.removeChild(counters[index]);
+                index++;
+                diff++;
+            }
         }
     }
 
@@ -178,83 +193,119 @@
         var counters = this.counters;
         var option = this.option;
         var directForStop = option.directForStop;
-        var directDiff = toNumber(option.directDiff) || 1;
+        var specialNums = option.specialNums;
         var len = this.hasCount = numStr.length;
-        var times = toNumber(option.countTimes);
         var start = directForStop === LEFT ? 0 : len-1;
-        var isRandom = option.isRandom;
-        var isIncrease = option.isIncrease;
         this.countNumber = countNumber.bind(this);      //给每个numberCounter一个专属的countNumber函数属性，用于后面的wrapNext函数不会因为countNumber的that问题而产生事件交叉
-        var curSpecial;
-        var specialNums = this.option.specialNums;
-        var speNumDirect = this.option.speNumDirect;
-        var maxTime = !speNumDirect && specialNums && specialNums.length && this.maxTime();
-        var descSpeed = option.endMillSecond ? calcuGradSpeed(times+1,option.interval,directDiff,numStr.length-1,option.endMillSecond) : option.descSpeed; 
-        this.hasCount -= specialNums.length;
+        this.hasCount -= specialNums.length || numStr.length;
         while(start>-1){
             if(directForStop === LEFT ? start>len-1 : start<0)break;
             var counter = counters[start];
-            var nb = counter.nb = {};
-            nb.nbtimer = null;
-            nb.nbInterval = toNumber(option.interval);
-            nb.isRandom = option.isRandom;
-            nb.isIncrease = option.isIncrease;
-            nb.descSpeed = option.descSpeed;
-            curSpecial = null;
-            specialNums.map(function(item,i){
-                var tindex = speNumDirect ?  i : item.index;
-                var diff = specialNums.length - numStr.length;
-                var tmpStart = start + (speNumDirect && speNumDirect != LEFT ? diff : 0);
-                if(curSpecial)return;
-                curSpecial = tindex == tmpStart ? item : null;
-            })
-            if(option.showAnimate){
-                nb.animateFn = transitionCallBack || false;
-                nb.showAnimate = option.showAnimate;
-                initPieceCallback(counter);
-            }else{
-                commonCallBack(counter,0);
-                nb.animateFn = commonCallBack;
-            }
-            var showNumber = +numStr[start];
-            /**
-             * 1、选择某一个位置的数字计数时逐渐减缓，其他位置的计数同时从1到9循环计数。
-             * 2、根据数组的元素位置给对应位置的数字循环递增或递减0~9，在最后一轮则在递增或递减至该数字
-             */
+            counter.nb = {};
+            this.initCommon(start,this.option);
+
             if(specialNums && specialNums.length){
-                var runInfo = null;
-                if(speNumDirect&&curSpecial){
-                    runInfo = caluSpeNumInfo(curSpecial.cycleTimes,curSpecial.totalMillSecond,showNumber);
-                    curSpecial.interval = runInfo.interval;
-                    curSpecial.times = runInfo.times;
-                }else{
-                    runInfo = {interval:option.interval};
-                }
-                nb.isFirst = true;
-                nb.times = curSpecial ? (speNumDirect ? curSpecial.times : +showNumber-1 ): (maxTime ? Math.floor(maxTime/option.interval)-1 : showNumber-1);
-                nb.runIterator = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
-                nb.specialNum = curSpecial || runInfo;
-                option.autoRun && nb.runIterator && nb.runIterator.run();
-            /**
-             * 随机计数
-             * 1、同时计数，同时结束，随机计数
-             * 2、从左到右或从右到左随机计数逐渐停止
-             * 3、从0开始计数直到该位置的数字为止而停止，同时开始，不同时结束
-             */
-            }else if(isRandom||!isNaN(showNumber)){
-                nb.isFirst = true;
-                nb.times = isRandom ? getcountTimes(counters,start,times,directForStop,directDiff) : isIncrease ? +showNumber-1 : (10-showNumber-1);
-                nb.runIterator = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
-                option.autoRun && nb.runIterator && nb.runIterator.run();
+                this.initWayOfSpeNums(start,option);
             }else{
-                nb.times = 0;
-                this.countNumber(counter,showNumber)();
+                this.initWayOfCommon(start,option);
             }
+            
             if(directForStop === LEFT){
                 start++;
             }else{
                 start--;
             }
+        }
+    }
+
+    /**
+     * 初始化常用参数
+     * @param {Number} start 
+     * @param {Object} option 
+     */
+    numberCounter.prototype.initCommon = function(start,option){
+        var counter = this.counters[start];
+        var nb = counter.nb;
+        var numStr = this.numberStr;
+        nb.nbtimer = null;
+        nb.nbInterval = toNumber(option.interval);
+        nb.isRandom = option.isRandom;
+        nb.isIncrease = option.isIncrease;
+        if(option.showAnimate){
+            nb.animateFn = transitionCallBack || false;
+            nb.showAnimate = option.showAnimate;
+            initPieceCallback(counter);
+        }else{
+            commonCallBack(counter,0);
+            nb.animateFn = commonCallBack;
+        }
+        nb.showNumber = isNaN(numStr[start]) ? numStr[start] : +numStr[start];
+    }
+
+    /**
+     * 初始化指定位置动画方式参数
+     * 1、选择某一个位置的数字计数时逐渐减缓，其他位置的计数同时从1到9循环计数。
+     * 2、根据数组的元素位置给对应位置的数字循环递增或递减0~9，在最后一轮则在递增或递减至该数字
+     * @param {Number} start 
+     * @param {Object} option 
+     */
+    numberCounter.prototype.initWayOfSpeNums = function(start,option){
+        var curSpecial,iterators,runInfo = null,numStr = this.numberStr;
+        var counter = this.counters[start];
+        var nb = counter.nb;
+        var specialNums = option.specialNums;
+        var speNumDirect = this.option.speNumDirect;
+        var maxTime = !speNumDirect && specialNums && specialNums.length && this.maxTime();
+        var showNumber = nb.showNumber;
+        specialNums.map(function(item,i){
+            var tindex = speNumDirect ?  i : item.index;
+            var diff = specialNums.length - numStr.length;
+            var tmpStart = start + (speNumDirect && speNumDirect != LEFT ? diff : 0);
+            if(curSpecial)return;
+            curSpecial = tindex == tmpStart ? item : null;
+        });
+
+        if(speNumDirect&&curSpecial){
+            runInfo = caluSpeNumInfo(curSpecial.cycleTimes,curSpecial.totalMillSecond,showNumber);
+            curSpecial.interval = runInfo.interval;
+            curSpecial.times = runInfo.times;
+        }else{
+            runInfo = {interval:option.interval};
+        }
+        nb.isFirst = true;
+        nb.times = curSpecial ? (speNumDirect ? curSpecial.times : +showNumber-1 ): (maxTime ? Math.floor(maxTime/option.interval)-1 : showNumber-1);
+        iterators = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
+        nb.runIterator = nb.runIterator instanceof Array ? nb.runIterator.concat(iterators) : iterators;
+        nb.specialNum = curSpecial || runInfo;
+        option.autoRun && nb.runIterator && nb.runIterator.run();
+    }
+
+    /**
+     * 初始化普通动画方式参数
+     * 1、同时计数，同时结束，随机计数
+     * 2、从左到右或从右到左随机计数逐渐停止
+     * 3、从0开始计数直到该位置的数字为止而停止，同时开始，不同时结束
+     * @param {Number} start 
+     * @param {Object} option 
+     */
+    numberCounter.prototype.initWayOfCommon = function(start,option){
+        var counter = this.counters[start];
+        var nb = counter.nb;
+        var showNumber = nb.showNumber;
+        var directForStop = option.directForStop;
+        var times = toNumber(option.countTimes);
+        var isRandom = option.isRandom;
+        var isIncrease = option.isIncrease;
+        var directDiff = toNumber(option.directDiff) || 1;
+        nb.descSpeed = option.endMillSecond ? calcuGradSpeed(times+1,option.interval,directDiff,this.numberStr.length-1,option.endMillSecond) : option.descSpeed; 
+        if(isRandom||!isNaN(showNumber)){
+            nb.isFirst = true;
+            nb.times = isRandom ? getcountTimes(this.counters,start,times,directForStop,directDiff) : isIncrease ? +showNumber+(showNumber ? -1 : 1) : (10-showNumber-1);
+            nb.runIterator = runIterator({initfn:this.countNumber(counter,showNumber),initTimes:nb.times});
+            option.autoRun && nb.runIterator && nb.runIterator.run();
+        }else{
+            nb.times = 0;
+            this.countNumber(counter,showNumber)();
         }
     }
 
@@ -356,7 +407,8 @@
     numberCounter.prototype.addIterator = function(index,num,times,fn){
         if(!toNumber(num))return;
         index = toNumber(index);
-        var counter = this.counters[index];
+        var counter = this.counters[index-1];
+        if(counter.nb.specialNum && times)counter.nb.times += times;
         if(!toNumber(times))times = 1;
         if(typeof fn !== 'function'){
             fn = this.countNumber(counter,num);
@@ -367,7 +419,48 @@
             counter.nb.runIterator.push(fn);
             times--;
         }
-        counter.nb.runIterator.run();
+        if(counter.nb.runIterator.isStop){
+            counter.nb.runIterator.isStop = false;
+            counter.nb.runIterator.run();
+        }
+    }
+
+    numberCounter.prototype.toNewNumber = function(newNum){
+        if(isNaN(newNum))return;
+        var old = +this.option.number;
+        var oldStr = old+"";
+        newNum = +newNum;
+        var newStr = newNum+"";
+        this.numberStr = newStr;
+        var diff = newNum - old;
+        var diffStr = diff+"";
+        var diffLen = newStr.length-oldStr.length;
+        var option = this.option;
+        if(diffLen>0)this.addRestPiece(newStr,true);
+        var counters = this.counters;
+        for(var i = 0,len=newStr.length;i<len;i++){
+            var index = i + (diffLen < 0 ? diffLen : 0);
+            var counter = counters[i];
+            if(!counter.nb){
+                var nb = counter.nb = {};
+                this.initCommon(i,option);
+                if(option.specialNums && option.specialNums.length){
+                    this.initWayOfSpeNums(i,option);
+                }else{
+                    this.initWayOfCommon(i,option);
+                }
+            }else{
+                var hasPreNum = diffLen<=i;
+                var oldNum = +oldStr[index-1];
+                var newNum = +newStr[i];
+                var times = nb.times = 10 + newNum-oldNum;
+                while(times>0){
+                    counter.nb.runIterator.push(this.countNumber(counter,newNum));
+                    times--;
+                }
+            }
+        }
+        this.reRun();
     }
     
 
@@ -672,7 +765,6 @@
      * @param {Integer} i
      */
     runIterator.prototype.splice = function(fn,index,i){
-        var args = slice(arguments,3);
         var spliceArgs = slice(arguments,1,3);
         spliceArgs.push(fn);
         Array.prototype.splice.apply(this.iterator,spliceArgs);
@@ -693,8 +785,11 @@
     runIterator.prototype.run = function(){
         if(this.iterator.length){
             if(this.isStop || this.stopIndex == this.iterator.length)return;
+            !this.isStop || (this.isStop = false);
             var rfn = this.iterator.shift();
             return rfn();
+        }else{
+            this.isStop = true;
         }
     }
 
